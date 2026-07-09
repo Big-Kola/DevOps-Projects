@@ -1,0 +1,11 @@
+name: Deploy
+on: [push]
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build Docker image
+        run: docker build -t bridge-dashboard .
+      - name: Run container
+        run: docker run -d -p 8080:80 bridge-dashboard
