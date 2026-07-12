@@ -1,0 +1,30 @@
+## What I Did
+
+I deployed a simple HTML app with an nginx server. I also containerized the app and made a GitHub workflow for automatic deployment.
+
+I used nginx because I need a server to serve my file. Without it, the HTML file would only be accessible on my local machine and would not be available when my laptop shuts down.
+
+I dockerized it so the file can run on any machine. Docker makes the setup portable — anyone can run the same container without installing nginx manually.
+
+## What I Think Needs Upgrade
+
+1. **IP changes** — If my IP address changes, the app is not accessible again.
+2. **Security** — Sharing my IP address is not safe. It exposes my machine directly.
+
+## What Can Be Done?
+
+1. Find a tool that maps an IP address to a domain name, so I use the domain name all the time.
+2. Find a tool that keeps the app accessible even when my IP changes.
+
+## CI/CD Pipeline — What It Actually Solves
+
+My CI/CD should solve the problem of me manually deploying the app. Once I push to GitHub and the workflow runs, whatever changes I have made will be automatically deployed — instead of me building the Docker image and pushing again.
+
+**What it does NOT solve:** The app still runs on my laptop. When my laptop dies, the app dies. CI/CD only automates the build process, not the hosting.
+
+## Next Step (Hour 5)
+
+- **Problem:** App only runs on my laptop, not available 24/7
+- **Approach:** Rent a cloud VM that stays on all the time, deploy the container there
+- **Disadvantages:** Cost (even when no one visits), need to monitor it, manual SSH for updates
+- **Tool:** AWS EC2 (the VM), Docker Hub (image storage), GitHub Actions SSH step (auto-deploy)
