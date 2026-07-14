@@ -3,7 +3,7 @@ terraform {
     bucket         = "bigkola-tfstate-buc"
     key            = "bridge-sensor-dashboard/terraform.tfstate"
     region         = "us-east-2"
-    dynamodb_table = "terraform-state-lock"
+    use_lockfile   = true
     encrypt        = true
   }
 }
