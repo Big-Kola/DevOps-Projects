@@ -6,6 +6,8 @@ jobs:
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    outputs:
+      public_ip: ${{ steps.get-ip.outputs.public_ip }}
     steps:
       - uses: actions/checkout@v3
       - name: Setup Terraform
@@ -18,7 +20,10 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve
         working-directory: Bridge-Sensor-Dashboard
-        
+      - name: Get EC2 IP
+        id: get-ip
+        run: echo "public_ip=$(terraform output -raw public_ip)" >> $GITHUB_OUTPUT
+        working-directory: Bridge-Sensor-Dashboard
 
   build-and-deploy:
     needs: terraform
@@ -42,7 +47,7 @@ jobs:
         run: |
           echo "${{ secrets.EC2_SSH_KEY }}" > ssh-key.pem
           chmod 600 ssh-key.pem
-          ssh -o StrictHostKeyChecking=no -i ssh-key.pem ubuntu@${{ secrets.EC2_EIP }} '
+          ssh -o StrictHostKeyChecking=no -i ssh-key.pem ubuntu@${{ needs.terraform.outputs.public_ip }} '
           sudo docker pull bigkola1/bridge-sensor-dashboard:latest
           sudo docker stop bridge-sensor || true
           sudo docker rm bridge-sensor || true
