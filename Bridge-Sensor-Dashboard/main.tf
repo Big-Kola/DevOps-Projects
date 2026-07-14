@@ -1,4 +1,14 @@
 terraform {
+  backend "s3" {
+    bucket         = "bigkola-tfstate-buc"
+    key            = "bridge-sensor-dashboard/terraform.tfstate"
+    region         = "us-east-2"
+    dynamodb_table = "terraform-state-lock"
+    encrypt        = true
+  }
+}
+
+terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -67,7 +77,39 @@ resource "aws_instance" "bridge_sensor" {
   tags = {
     Name = "bridge-sensor"
   }
+
+  user_data = <<EOF
+#cloud-config
+package_update: true
+package_upgrade: true
+groups:
+ - docker
+system_info:
+ default_user:
+  groups: [docker]
+
+packages:
+ - apt-transport-https
+ - ca-certificates
+ - curl
+ - gnupg
+ - lsb-release
+
+runcmd:
+ - mkdir -p /etc/apt/keyrings
+ - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+ - echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+ - apt-get update
+ - apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+ - systemctl enable docker
+ - systemctl start docker
+ - docker pull bigkola1/bridge-sensor-dashboard:latest
+ - docker run -d -p 80:80 bigkola1/bridge-sensor-dashboard:latest
+final_message: "Docker installation completed after $UPTIME seconds"
+EOF
 }
+
+
 
 resource "aws_eip" "bridge_sensor" {
   instance = aws_instance.bridge_sensor.id

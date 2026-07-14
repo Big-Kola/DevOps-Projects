@@ -8,7 +8,7 @@ I dockerized it so the file can run on any machine. Docker makes the setup porta
 
 ## What I Think Needs Upgrade
 
-1. **IP changes** — If my IP address changes, the app is not accessible again.
+1. **IP changes** — If my IP address changes, the app is not accessible again. This has been solved using elastic Ip.
 2. **Security** — Sharing my IP address is not safe. It exposes my machine directly.
 
 ## What Can Be Done?
