@@ -14,6 +14,7 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.14.6
+          terraform_wrapper: false
       - name: Terraform Init
         run: terraform init
         working-directory: Bridge-Sensor-Dashboard
@@ -22,9 +23,7 @@ jobs:
         working-directory: Bridge-Sensor-Dashboard
       - name: Get EC2 IP
         id: get-ip
-        run: |
-          terraform output -raw public_ip | grep -oE '([0-9]{1,3}\.){3}[0-9]{1,3}' > /tmp/ec2_ip.txt
-          echo "public_ip=$(cat /tmp/ec2_ip.txt)" >> "${GITHUB_OUTPUT}"
+        run: echo "public_ip=$(terraform output -raw public_ip)" >> "${GITHUB_OUTPUT}"
         working-directory: Bridge-Sensor-Dashboard
 
   build-and-deploy:
@@ -47,6 +46,7 @@ jobs:
 
       - name: SSH into EC2 and update container
         run: |
+          echo "Target IP: ${{ needs.terraform.outputs.public_ip }}"
           echo "${{ secrets.EC2_SSH_KEY }}" > ssh-key.pem
           chmod 600 ssh-key.pem
           ssh -o StrictHostKeyChecking=no -i ssh-key.pem ubuntu@${{ needs.terraform.outputs.public_ip }} '
