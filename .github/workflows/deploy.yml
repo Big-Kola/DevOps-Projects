@@ -55,11 +55,13 @@ jobs:
           name: public-ip
       - name: SSH into EC2 and update container
         run: |
-          EC2_IP=$(cat public_ip.txt)
-          echo "Target IP: $EC2_IP"
+          ls -la public_ip.txt
+          EC2_IP=$(cat public_ip.txt | xargs)
+          echo "Target IP: '$EC2_IP'"
+          echo "IP length: ${#EC2_IP}"
           echo "${{ secrets.EC2_SSH_KEY }}" > ssh-key.pem
           chmod 600 ssh-key.pem
-          ssh -o StrictHostKeyChecking=no -i ssh-key.pem "ubuntu@$EC2_IP" '
+          ssh -vvv -o StrictHostKeyChecking=no -i ssh-key.pem "ubuntu@$EC2_IP" '
           sudo docker pull bigkola1/bridge-sensor-dashboard:latest
           sudo docker stop bridge-sensor || true
           sudo docker rm bridge-sensor || true
