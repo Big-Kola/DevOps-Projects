@@ -14,7 +14,6 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.14.6
-          terraform_wrapper: false
       - name: Terraform Init
         run: terraform init
         working-directory: Bridge-Sensor-Dashboard
@@ -23,13 +22,8 @@ jobs:
         working-directory: Bridge-Sensor-Dashboard
       - name: Get EC2 IP
         id: get-ip
-        run: terraform output -raw public_ip > /tmp/public_ip.txt
+        run: echo "public_ip=$(terraform output -raw public_ip)" >> $GITHUB_OUTPUT
         working-directory: Bridge-Sensor-Dashboard
-      - name: Upload IP
-        uses: actions/upload-artifact@v4
-        with:
-          name: public-ip
-          path: /tmp/public_ip.txt
 
   build-and-deploy:
     needs: terraform
@@ -49,14 +43,12 @@ jobs:
           tags: bigkola1/bridge-sensor-dashboard:latest
           context: Bridge-Sensor-Dashboard
 
-      - name: Download IP
-        uses: actions/download-artifact@v4
-        with:
-          name: public-ip
       - name: SSH into EC2 and update container
         run: |
-          EC2_IP=$(cat public_ip.txt | xargs)
-          echo "Target IP: $EC2_IP"
           echo "${{ secrets.EC2_SSH_KEY }}" > ssh-key.pem
           chmod 600 ssh-key.pem
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i ssh-key.pem "ubuntu@$EC2_IP" 'sudo docker pull bigkola1/bridge-sensor-dashboard:latest && sudo docker stop bridge-sensor || true && sudo docker rm bridge-sensor || true && sudo docker run -d -p 80:80 --name bridge-sensor bigkola1/bridge-sensor-dashboard:latest'
+          ssh -o StrictHostKeyChecking=no -i ssh-key.pem ubuntu@${{ needs.terraform.outputs.public_ip }} '
+          sudo docker pull bigkola1/bridge-sensor-dashboard:latest
+          sudo docker stop bridge-sensor || true
+          sudo docker rm bridge-sensor || true
+          sudo docker run -d -p 80:80 --name bridge-sensor bigkola1/bridge-sensor-dashboard:latest'
