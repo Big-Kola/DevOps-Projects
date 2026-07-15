@@ -12,15 +12,15 @@ provider "aws" {
 }
 
 resource "aws_s3_bucket" "tf_state" {
-    bucket = "bigkola-tfstate-buc"
+  bucket = "bigkola-tfstate-buc"
 }
 
 # Enable versioning on the bucket (so you can recover old state)
-resource "aws_s3_bucket_versioning" "tf_state" {              
-    bucket = aws_s3_bucket.tf_state.id
-    versioning_configuration {
-        status = "Enabled"
-    }
+resource "aws_s3_bucket_versioning" "tf_state" {
+  bucket = aws_s3_bucket.tf_state.id
+  versioning_configuration {
+    status = "Enabled"
+  }
 }
 
 resource "aws_dynamodb_table" "tf_lock" {
