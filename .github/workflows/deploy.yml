@@ -59,4 +59,4 @@ jobs:
           echo "Target IP: $EC2_IP"
           echo "${{ secrets.EC2_SSH_KEY }}" > ssh-key.pem
           chmod 600 ssh-key.pem
-          ssh -o StrictHostKeyChecking=no -i ssh-key.pem "ubuntu@$EC2_IP" 'sudo docker pull bigkola1/bridge-sensor-dashboard:latest'
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 -i ssh-key.pem "ubuntu@$EC2_IP" 'sudo docker pull bigkola1/bridge-sensor-dashboard:latest && sudo docker stop bridge-sensor || true && sudo docker rm bridge-sensor || true && sudo docker run -d -p 80:80 --name bridge-sensor bigkola1/bridge-sensor-dashboard:latest'
