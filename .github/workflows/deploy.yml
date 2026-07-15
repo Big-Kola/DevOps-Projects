@@ -22,7 +22,7 @@ jobs:
         working-directory: Bridge-Sensor-Dashboard
       - name: Get EC2 IP
         id: get-ip
-        run: echo "public_ip=$(terraform output -raw public_ip)" >> $GITHUB_OUTPUT
+        run: echo "public_ip=$(terraform output -raw public_ip | head -1)" >> $GITHUB_OUTPUT
         working-directory: Bridge-Sensor-Dashboard
 
   build-and-deploy:
