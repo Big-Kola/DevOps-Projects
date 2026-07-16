@@ -12,7 +12,8 @@ provider "aws" {
 }
 
 resource "aws_s3_bucket" "tf_state" {
-  bucket = "bigkola-tfstate-buck"
+  bucket        = "bigkola-tfstate-buck"
+  force_destroy = true
 }
 
 # Enable versioning on the bucket (so you can recover old state)

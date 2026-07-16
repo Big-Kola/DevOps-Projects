@@ -59,107 +59,25 @@ jobs:
           push: true
           tags: bigkola1/bridge-sensor-dashboard:latest
 
-      - name: SSH into EC2 and update container
+      - name: Set up Ansible
+        run: |
+          pip install ansible
+          ansible-galaxy collection install community.docker
+
+      - name: Run Ansible playbook
+        env:
+          EC2_IP: ${{ needs.terraform.outputs.public_ip }}
         run: |
           echo "${{ secrets.EC2_SSH_KEY }}" > ssh-key.pem
           chmod 600 ssh-key.pem
 
-          EC2_IP="${{ needs.terraform.outputs.public_ip }}"
+          cat > inventory.yml << EOF
+          all:
+            hosts:
+              bridge-server:
+                ansible_host: $EC2_IP
+                ansible_user: ubuntu
+                ansible_ssh_private_key_file: ssh-key.pem
+          EOF
 
-          echo "Waiting for SSH to become available..."
-
-          for attempt in $(seq 1 30); do
-            if ssh \
-              -o StrictHostKeyChecking=no \
-              -o ConnectTimeout=10 \
-              -o BatchMode=yes \
-              -i ssh-key.pem \
-              ubuntu@"$EC2_IP" \
-              "echo SSH is ready"; then
-              break
-            fi
-
-            if [ "$attempt" -eq 30 ]; then
-              echo "SSH did not become available after 5 minutes."
-              exit 1
-            fi
-
-            echo "SSH is not ready. Retrying in 10 seconds..."
-            sleep 10
-          done
-
-          ssh \
-            -o StrictHostKeyChecking=no \
-            -o ConnectTimeout=10 \
-            -i ssh-key.pem \
-            ubuntu@"$EC2_IP" '
-              set -e
-
-              echo "Waiting for cloud-init to finish..."
-              sudo cloud-init status --wait
-
-              echo "Waiting for Docker to become available..."
-
-              for attempt in $(seq 1 36); do
-                if command -v docker >/dev/null 2>&1; then
-                  echo "Docker is ready."
-                  break
-                fi
-
-                if [ "$attempt" -eq 36 ]; then
-                  echo "Docker was not available after 6 minutes."
-                  sudo cloud-init status --long || true
-                  exit 1
-                fi
-
-                echo "Docker is not ready. Retrying in 10 seconds..."
-                sleep 10
-              done
-
-              echo "Removing the previous bridge-sensor container..."
-              sudo docker stop bridge-sensor 2>/dev/null || true
-              sudo docker rm bridge-sensor 2>/dev/null || true
-
-              echo "Checking for another container using port 80..."
-
-              PORT_80_CONTAINERS=$(sudo docker ps \
-                --filter "publish=80" \
-                --format "{{.ID}}")
-
-              if [ -n "$PORT_80_CONTAINERS" ]; then
-                echo "Stopping containers currently using port 80:"
-                sudo docker ps \
-                  --filter "publish=80" \
-                  --format "table {{.ID}}\t{{.Names}}\t{{.Ports}}"
-
-                for container_id in $PORT_80_CONTAINERS; do
-                  sudo docker stop "$container_id"
-                  sudo docker rm "$container_id"
-                done
-              fi
-
-              echo "Checking whether a host service is still using port 80..."
-
-              if sudo ss -ltnp | grep -q ":80 "; then
-                echo "Port 80 is being used by a non-Docker service:"
-                sudo ss -ltnp | grep ":80 " || true
-                exit 1
-              fi
-
-              echo "Pulling the latest Docker image..."
-              sudo docker pull bigkola1/bridge-sensor-dashboard:latest
-
-              echo "Starting the new container..."
-              sudo docker run -d \
-                -p 80:80 \
-                --restart unless-stopped \
-                --name bridge-sensor \
-                bigkola1/bridge-sensor-dashboard:latest
-
-              echo "Container deployed successfully."
-              sudo docker ps \
-                --filter "name=bridge-sensor" \
-                --format "table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Ports}}"
-            '
-
-          rm -f ssh-key.pem
+          ansible-playbook -i inventory.yml Bridge-Sensor-Dashboard/playbook.yml

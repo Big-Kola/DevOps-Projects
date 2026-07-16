@@ -1,0 +1,24 @@
+- name: Maintain bridge sensor server
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Ensure Docker is running
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Pull latest image
+      docker_image:
+        name: bigkola1/bridge-sensor-dashboard:latest
+        source: pull
+
+    - name: Ensure bridge-sensor container is running
+      docker_container:
+        name: bridge-sensor
+        image: bigkola1/bridge-sensor-dashboard:latest
+        state: started
+        ports:
+          - "80:80"
+        restart_policy: unless-stopped
+        image_name_mismatch: ignore
