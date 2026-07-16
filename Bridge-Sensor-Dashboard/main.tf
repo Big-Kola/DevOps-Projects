@@ -1,10 +1,10 @@
 terraform {
   backend "s3" {
-    bucket         = "bigkola-tfstate-buck"
-    key            = "bridge-sensor-dashboard/terraform.tfstate"
-    region         = "us-east-1"
-    use_lockfile   = true
-    encrypt        = true
+    bucket       = "bigkola-tfstate-buck"
+    key          = "bridge-sensor-dashboard/terraform.tfstate"
+    region       = "us-east-1"
+    use_lockfile = true
+    encrypt      = true
   }
 }
 
