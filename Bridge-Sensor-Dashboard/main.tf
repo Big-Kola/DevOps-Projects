@@ -1,8 +1,8 @@
 terraform {
   backend "s3" {
-    bucket         = "bigkola-tfstate-buc"
+    bucket         = "bigkola-tfstate-buck"
     key            = "bridge-sensor-dashboard/terraform.tfstate"
-    region         = "us-east-2"
+    region         = "us-east-1"
     use_lockfile   = true
     encrypt        = true
   }
@@ -19,7 +19,7 @@ terraform {
 
 # Configure the AWS Provider
 provider "aws" {
-  region = "us-east-2"
+  region = "us-east-1"
 }
 
 resource "aws_security_group" "bridge_sg" {

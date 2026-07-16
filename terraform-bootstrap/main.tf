@@ -8,11 +8,11 @@ terraform {
 }
 
 provider "aws" {
-  region = "us-east-2"
+  region = "us-east-1"
 }
 
 resource "aws_s3_bucket" "tf_state" {
-  bucket = "bigkola-tfstate-buc"
+  bucket = "bigkola-tfstate-buck"
 }
 
 # Enable versioning on the bucket (so you can recover old state)
