@@ -67,9 +67,13 @@ jobs:
       - name: Run Ansible playbook
         env:
           EC2_IP: ${{ needs.terraform.outputs.public_ip }}
+          ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
           echo "${{ secrets.EC2_SSH_KEY }}" > ssh-key.pem
           chmod 600 ssh-key.pem
+
+          echo "Waiting for cloud-init to finish..."
+          ssh -o StrictHostKeyChecking=no -i ssh-key.pem ubuntu@"$EC2_IP" "sudo cloud-init status --wait"
 
           cat > inventory.yml << EOF
           webservers:
