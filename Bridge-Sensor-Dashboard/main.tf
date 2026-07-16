@@ -65,7 +65,7 @@ data "aws_ami" "ubuntu" {
 }
 
 data "aws_subnet" "existing" {
-  id = "subnet-0b98c9bbf02ae0d52"
+  id = "subnet-079b98de22e1e2c75"
 }
 
 resource "aws_instance" "bridge_sensor" {
