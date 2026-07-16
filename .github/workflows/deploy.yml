@@ -1,6 +1,7 @@
 name: Deploy
 
-on: [push]
+on:
+  push:
 
 jobs:
   terraform:
@@ -14,7 +15,8 @@ jobs:
       public_ip: ${{ steps.get-ip.outputs.public_ip }}
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -32,7 +34,8 @@ jobs:
 
       - name: Get EC2 IP
         id: get-ip
-        run: echo "public_ip=$(terraform output -raw public_ip)" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "public_ip=$(terraform output -raw public_ip)" >> "$GITHUB_OUTPUT"
         working-directory: Bridge-Sensor-Dashboard
 
   build-and-deploy:
@@ -40,7 +43,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v4
@@ -51,9 +55,9 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v7
         with:
+          context: Bridge-Sensor-Dashboard
           push: true
           tags: bigkola1/bridge-sensor-dashboard:latest
-          context: Bridge-Sensor-Dashboard
 
       - name: SSH into EC2 and update container
         run: |
@@ -64,7 +68,7 @@ jobs:
 
           echo "Waiting for SSH to become available..."
 
-          for attempt in {1..30}; do
+          for attempt in $(seq 1 30); do
             if ssh \
               -o StrictHostKeyChecking=no \
               -o ConnectTimeout=10 \
@@ -76,7 +80,7 @@ jobs:
             fi
 
             if [ "$attempt" -eq 30 ]; then
-              echo "SSH did not become available."
+              echo "SSH did not become available after 5 minutes."
               exit 1
             fi
 
@@ -103,7 +107,7 @@ jobs:
                 fi
 
                 if [ "$attempt" -eq 36 ]; then
-                  echo "Docker was not installed after waiting 6 minutes."
+                  echo "Docker was not available after 6 minutes."
                   sudo cloud-init status --long || true
                   exit 1
                 fi
@@ -112,10 +116,40 @@ jobs:
                 sleep 10
               done
 
-              sudo docker pull bigkola1/bridge-sensor-dashboard:latest
+              echo "Removing the previous bridge-sensor container..."
               sudo docker stop bridge-sensor 2>/dev/null || true
               sudo docker rm bridge-sensor 2>/dev/null || true
 
+              echo "Checking for another container using port 80..."
+
+              PORT_80_CONTAINERS=$(sudo docker ps \
+                --filter "publish=80" \
+                --format "{{.ID}}")
+
+              if [ -n "$PORT_80_CONTAINERS" ]; then
+                echo "Stopping containers currently using port 80:"
+                sudo docker ps \
+                  --filter "publish=80" \
+                  --format "table {{.ID}}\t{{.Names}}\t{{.Ports}}"
+
+                for container_id in $PORT_80_CONTAINERS; do
+                  sudo docker stop "$container_id"
+                  sudo docker rm "$container_id"
+                done
+              fi
+
+              echo "Checking whether a host service is still using port 80..."
+
+              if sudo ss -ltnp | grep -q ":80 "; then
+                echo "Port 80 is being used by a non-Docker service:"
+                sudo ss -ltnp | grep ":80 " || true
+                exit 1
+              fi
+
+              echo "Pulling the latest Docker image..."
+              sudo docker pull bigkola1/bridge-sensor-dashboard:latest
+
+              echo "Starting the new container..."
               sudo docker run -d \
                 -p 80:80 \
                 --restart unless-stopped \
@@ -123,5 +157,9 @@ jobs:
                 bigkola1/bridge-sensor-dashboard:latest
 
               echo "Container deployed successfully."
-              sudo docker ps --filter name=bridge-sensor
+              sudo docker ps \
+                --filter "name=bridge-sensor" \
+                --format "table {{.ID}}\t{{.Names}}\t{{.Status}}\t{{.Ports}}"
             '
+
+          rm -f ssh-key.pem
