@@ -72,7 +72,7 @@ jobs:
           chmod 600 ssh-key.pem
 
           cat > inventory.yml << EOF
-          all:
+          webservers:
             hosts:
               bridge-server:
                 ansible_host: $EC2_IP
